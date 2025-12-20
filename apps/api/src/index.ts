@@ -47,6 +47,36 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Root route
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'Merchant App API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: {
+        merchant: {
+          register: 'POST /api/auth/merchant/register',
+          login: 'POST /api/auth/merchant/login',
+        },
+        partner: {
+          register: 'POST /api/auth/partner/register',
+          login: 'POST /api/auth/partner/login',
+        },
+      },
+      merchant: {
+        me: 'GET /api/merchant/me',
+      },
+      partner: {
+        me: 'GET /api/partner/me',
+        merchants: 'GET /api/partner/merchants',
+        context: 'GET /api/partner/context?merchantId=UUID',
+      },
+    },
+  });
+});
+
 // Health check route
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({

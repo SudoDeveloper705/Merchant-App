@@ -3,7 +3,7 @@ import { requireAuth, requirePartner } from '../middleware/auth.middleware';
 import { db } from '../config/database';
 import { sendInvitationEmail } from '../services/email.service';
 import { hashPassword } from '../utils/password';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 const router = Router();
 
