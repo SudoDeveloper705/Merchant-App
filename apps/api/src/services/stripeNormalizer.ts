@@ -137,7 +137,7 @@ export function normalizeCharge(charge: Stripe.Charge): NormalizedTransaction {
   let transactionType: 'PAYMENT' | 'REFUND' | 'CHARGEBACK' = 'PAYMENT';
   if (charge.refunded) {
     transactionType = 'REFUND';
-  } else if (charge.dispute) {
+  } else if ((charge as any).dispute || (charge as any).disputed) {
     transactionType = 'CHARGEBACK';
   }
 

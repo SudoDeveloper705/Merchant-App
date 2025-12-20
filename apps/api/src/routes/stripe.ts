@@ -42,7 +42,7 @@ router.post(
       // Verify the API key by making a test request
       try {
         const testStripe = new Stripe(apiKey, {
-          apiVersion: '2024-11-20.acacia',
+          apiVersion: '2023-10-16' as any,
         });
         await testStripe.accounts.retrieve();
       } catch (error: any) {
@@ -241,7 +241,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
         const webhookSecret = decrypt(processor.webhook_secret_encrypted);
         
         const stripe = new Stripe('', {
-          apiVersion: '2024-11-20.acacia',
+          apiVersion: '2023-10-16' as any,
         });
 
         // req.body is a Buffer when using raw body parser

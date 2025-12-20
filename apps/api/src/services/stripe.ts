@@ -35,7 +35,7 @@ export async function getStripeClient(merchantId: string, processorId?: string):
   const apiKey = decrypt(processor.api_key_encrypted);
   
   return new Stripe(apiKey, {
-    apiVersion: '2024-11-20.acacia',
+    apiVersion: '2023-10-16' as any,
     typescript: true,
   });
 }

@@ -27,11 +27,14 @@ export interface MerchantLoginInput {
 export interface MerchantRegisterResult {
   user: {
     id: string;
+    name: string;
     email: string;
-    firstName: string;
-    lastName: string;
     role: string;
     merchantId: string;
+  };
+  merchant: {
+    id: string;
+    name: string;
   };
   accessToken: string;
   refreshToken: string;
@@ -43,11 +46,14 @@ export interface MerchantRegisterResult {
 export interface MerchantLoginResult {
   user: {
     id: string;
+    name: string;
     email: string;
-    firstName: string;
-    lastName: string;
     role: string;
     merchantId: string;
+  };
+  merchant: {
+    id: string;
+    name: string;
   };
   accessToken: string;
   refreshToken: string;
