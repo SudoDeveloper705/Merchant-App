@@ -75,11 +75,11 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return apiClient(originalRequest);
           }
-        } catch (refreshError) {
+        } catch (refreshError: any) {
           // Refresh failed - only redirect if it's not a network error
-          const isNetworkError = refreshError.code === 'ECONNREFUSED' || 
-                                refreshError.message?.includes('Network Error') || 
-                                refreshError.message?.includes('Failed to fetch');
+          const isNetworkError = refreshError?.code === 'ECONNREFUSED' || 
+                                refreshError?.message?.includes('Network Error') || 
+                                refreshError?.message?.includes('Failed to fetch');
           
           if (!isNetworkError) {
             // Only clear tokens and redirect for actual auth errors, not network errors

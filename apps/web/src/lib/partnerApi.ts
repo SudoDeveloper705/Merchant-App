@@ -317,10 +317,8 @@ export async function getRecentInvoices(
           net_cents: 54000 + (i * 10900),
           currency: 'USD',
           description: `Transaction ${i + 1}`,
-          metadata: null,
           transaction_date: date.toISOString(),
           created_at: date.toISOString(),
-          updated_at: date.toISOString(),
         });
       }
       return mockInvoices;
@@ -375,9 +373,7 @@ export async function getRecentPayouts(
           description: `Payout ${i + 1}`,
           scheduled_date: date.toISOString(),
           processed_at: i % 4 === 0 ? date.toISOString() : null,
-          metadata: null,
           created_at: date.toISOString(),
-          updated_at: date.toISOString(),
         });
       }
       return mockPayouts;
@@ -453,10 +449,8 @@ export async function getInvoices(
           net_cents: 54000 + ((startIndex + i) * 10900),
           currency: 'USD',
           description: `Transaction ${startIndex + i + 1}`,
-          metadata: null,
           transaction_date: date.toISOString(),
           created_at: date.toISOString(),
-          updated_at: date.toISOString(),
         });
       }
       
@@ -538,9 +532,7 @@ export async function getPayouts(
           description: `Payout ${startIndex + i + 1}`,
           scheduled_date: date.toISOString(),
           processed_at: status === 'COMPLETED' ? date.toISOString() : null,
-          metadata: null,
           created_at: date.toISOString(),
-          updated_at: date.toISOString(),
         });
       }
       

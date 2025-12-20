@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setPassword } from '@/lib/partnerApi';
+import { setPassword as setPasswordApi } from '@/lib/partnerApi';
 import Link from 'next/link';
 
 export default function SetPasswordPage() {
@@ -46,7 +46,7 @@ export default function SetPasswordPage() {
     setLoading(true);
 
     try {
-      await setPassword({ token, newPassword: password });
+      await setPasswordApi({ token, newPassword: password });
       setSuccess(true);
       
       // Redirect to login after 2 seconds

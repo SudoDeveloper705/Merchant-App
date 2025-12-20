@@ -126,15 +126,15 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
         // Try to get user from API (real authentication)
         try {
           const response = await getPartnerMe();
-          if (response && response.user && response.partner) {
+          if (response && response.success && response.data) {
             // Map response to PartnerUser interface
             const userData: PartnerUser = {
-              id: response.user.id,
-              name: response.user.name,
-              email: response.user.email,
-              role: response.user.role,
-              partnerId: response.user.partnerId,
-              partnerName: response.partner.name,
+              id: response.data.id,
+              name: response.data.name,
+              email: response.data.email,
+              role: response.data.role,
+              partnerId: response.data.partnerId || '',
+              partnerName: response.data.partnerName || '',
             };
             setUser(userData);
           }
@@ -215,7 +215,7 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
           name: response.user.name,
           email: response.user.email,
           role: response.user.role,
-          partnerId: response.user.partnerId,
+          partnerId: response.user.partnerId || '',
           partnerName: response.partner?.name || '',
         };
 
@@ -258,7 +258,7 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
           name: response.user.name,
           email: response.user.email,
           role: response.user.role,
-          partnerId: response.user.partnerId,
+          partnerId: response.user.partnerId || '',
           partnerName: response.partner?.name || '',
         };
 
@@ -313,15 +313,15 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await getPartnerMe();
       
-      if (response && response.user && response.partner) {
+      if (response && response.success && response.data) {
         // Map response to PartnerUser interface
         const userData: PartnerUser = {
-          id: response.user.id,
-          name: response.user.name,
-          email: response.user.email,
-          role: response.user.role,
-          partnerId: response.user.partnerId,
-          partnerName: response.partner.name,
+          id: response.data.id,
+          name: response.data.name,
+          email: response.data.email,
+          role: response.data.role,
+          partnerId: response.data.partnerId || '',
+          partnerName: response.data.partnerName || '',
         };
         setUser(userData);
       }

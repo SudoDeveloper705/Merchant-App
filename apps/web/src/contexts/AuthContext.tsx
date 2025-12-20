@@ -114,8 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name: dummyUser.name,
               email: dummyUser.email,
               role: dummyUser.role,
-              merchantId: dummyUser.merchantId,
-              merchantName: dummyUser.merchantName,
+              merchantId: dummyUser.merchantId || '',
+              merchantName: dummyUser.merchantName || '',
             };
             // Store in localStorage for next time
             localStorage.setItem('dummyUser', JSON.stringify(userData));
@@ -187,8 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: dummyUser.name,
           email: dummyUser.email,
           role: dummyUser.role,
-          merchantId: dummyUser.merchantId,
-          merchantName: dummyUser.merchantName,
+          merchantId: dummyUser.merchantId || '',
+          merchantName: dummyUser.merchantName || '',
         };
 
         // Store mock tokens and user data in localStorage
