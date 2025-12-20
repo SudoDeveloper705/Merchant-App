@@ -2,7 +2,7 @@
  * Shared types for Merchant App
  */
 
-import { UserRole } from './roles';
+import { LegacyUserRole } from './roles';
 
 // User Types
 export interface User {
@@ -10,7 +10,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: LegacyUserRole;
   merchantId?: string;
   isActive: boolean;
   createdAt: Date;
@@ -22,7 +22,7 @@ export interface CreateUserDto {
   password: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: LegacyUserRole;
   merchantId?: string;
 }
 
@@ -30,7 +30,7 @@ export interface UpdateUserDto {
   email?: string;
   firstName?: string;
   lastName?: string;
-  role?: UserRole;
+  role?: LegacyUserRole;
   merchantId?: string;
   isActive?: boolean;
 }

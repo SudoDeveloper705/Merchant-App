@@ -16,7 +16,7 @@ export enum PartnerRole {
 }
 
 // Legacy roles (for backward compatibility)
-export enum UserRole {
+export enum LegacyUserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   MERCHANT = 'MERCHANT',
@@ -35,10 +35,10 @@ export interface RolePermissions {
  * Permissions for each role
  */
 export const ROLE_PERMISSIONS: RolePermissions = {
-  [UserRole.SUPER_ADMIN]: [
+  [LegacyUserRole.SUPER_ADMIN]: [
     '*', // All permissions
   ],
-  [UserRole.ADMIN]: [
+  [LegacyUserRole.ADMIN]: [
     'users:read',
     'users:write',
     'merchants:read',
@@ -49,18 +49,18 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     'settings:read',
     'settings:write',
   ],
-  [UserRole.MERCHANT]: [
+  [LegacyUserRole.MERCHANT]: [
     'merchants:read:own',
     'merchants:write:own',
     'transactions:read:own',
     'transactions:write:own',
     'reports:read:own',
   ],
-  [UserRole.STAFF]: [
+  [LegacyUserRole.STAFF]: [
     'transactions:read:own',
     'transactions:write:own',
   ],
-  [UserRole.VIEWER]: [
+  [LegacyUserRole.VIEWER]: [
     'transactions:read:own',
     'reports:read:own',
   ],
@@ -69,7 +69,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
 /**
  * Check if a role has a specific permission
  */
-export function hasPermission(role: UserRole, permission: string): boolean {
+export function hasPermission(role: LegacyUserRole, permission: string): boolean {
   const permissions = ROLE_PERMISSIONS[role] || [];
   
   // Super admin has all permissions
@@ -83,7 +83,7 @@ export function hasPermission(role: UserRole, permission: string): boolean {
 /**
  * Check if a role has any of the specified permissions
  */
-export function hasAnyPermission(role: UserRole, permissions: string[]): boolean {
+export function hasAnyPermission(role: LegacyUserRole, permissions: string[]): boolean {
   return permissions.some(permission => hasPermission(role, permission));
 }
 
