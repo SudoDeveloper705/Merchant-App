@@ -22,10 +22,13 @@ Visit: https://vercel.com/dashboard
 - Should auto-detect as **Next.js** ✅
 - If not, select **Next.js** manually
 
-**Root Directory**:
-- Click **"Edit"** next to "Root Directory"
-- Change from `.` to: `apps/web`
-- Click **"Continue"**
+**Root Directory** (IMPORTANT):
+- In the Vercel import screen, look for **"Root Directory"** field
+- Click **"Edit"** or the pencil icon next to it
+- Change from `.` (root) to: `apps/web`
+- Click **"Continue"** or **"Deploy"**
+
+**Note**: This setting is in the Vercel UI, NOT in the vercel.json file!
 
 **Build Settings** (should auto-fill, but verify):
 - **Build Command**: `npm run build`
