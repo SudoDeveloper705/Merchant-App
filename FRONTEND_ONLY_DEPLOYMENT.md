@@ -30,10 +30,12 @@ Visit: https://vercel.com/dashboard
 
 **Note**: This setting is in the Vercel UI, NOT in the vercel.json file!
 
-**Build Settings** (should auto-fill, but verify):
-- **Build Command**: `npm run build`
+**Build Settings** (Vercel should auto-detect, but verify):
+- **Build Command**: `cd ../.. && npm run build:shared && cd apps/web && npm run build`
 - **Output Directory**: `.next`
-- **Install Command**: `cd ../.. && npm install && cd apps/web && npm install`
+- **Install Command**: `cd ../.. && npm install`
+
+**Note**: The build command builds the shared package first (required dependency), then builds the web app.
 
 ### 4. Environment Variables (Optional)
 
