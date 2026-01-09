@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,9 +9,16 @@ interface MerchantLayoutProps {
   children: ReactNode;
 }
 
+interface NavItem {
+  name: string;
+  href: string;
+  subItems?: NavItem[];
+}
+
 export function MerchantLayout({ children }: MerchantLayoutProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['revenue-splits', 'user-role-management']));
 
   // Role-based navigation
   const getCurrentRole = (): string => {
@@ -21,13 +28,30 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
     return 'merchant_owner'; // Default
   };
 
-  const getNavigation = () => {
+  const getNavigation = (): NavItem[] => {
     const role = getCurrentRole();
 
+    // Revenue Splits submenu
+    const revenueSplitsSubmenu: NavItem[] = [
+      { name: 'Split Configuration', href: '/merchant/payouts/split-configuration' },
+      { name: 'Partner Share Breakdown', href: '/merchant/payouts/partner-share' },
+      { name: 'Historical Payouts', href: '/merchant/payouts/history' },
+      { name: 'Pending Payouts', href: '/merchant/payouts/pending' },
+      { name: 'Adjustments & Overrides', href: '/merchant/payouts/adjustments' },
+      { name: 'Audit Trail', href: '/merchant/payouts/audit-trail' },
+    ];
+
+    // User & Role Management submenu
+    const userManagementSubmenu: NavItem[] = [
+      { name: 'User List', href: '/merchant/users' },
+      { name: 'Invite User', href: '/merchant/users/invite' },
+    ];
+
     // Base navigation items available to all roles
-    const baseNav = [
+    const baseNav: NavItem[] = [
       { name: 'Dashboard', href: '/merchant/dashboard' },
       { name: 'Transactions', href: '/merchant/transactions' },
+      { name: 'Invoices', href: '/merchant/invoices' },
     ];
 
     switch (role) {
@@ -38,6 +62,8 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Partners', href: '/merchant/partners' },
           { name: 'Agreements', href: '/merchant/agreements' },
           { name: 'Payouts', href: '/merchant/payouts' },
+          { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
+          { name: 'User & Role Management', href: '/merchant/users', subItems: userManagementSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
         ];
       case 'merchant_manager':
@@ -46,6 +72,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           ...baseNav,
           { name: 'Partners', href: '/merchant/partners' },
           { name: 'Agreements', href: '/merchant/agreements' },
+          { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
         ];
       case 'merchant_accountant':
@@ -53,6 +80,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
         return [
           ...baseNav,
           { name: 'Payouts', href: '/merchant/payouts' },
+          { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
         ];
       default:
@@ -62,13 +90,34 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Partners', href: '/merchant/partners' },
           { name: 'Agreements', href: '/merchant/agreements' },
           { name: 'Payouts', href: '/merchant/payouts' },
+          { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
+          { name: 'User & Role Management', href: '/merchant/users', subItems: userManagementSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
         ];
     }
   };
 
   const navigation = getNavigation();
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
+  const isSectionActive = (item: NavItem) => {
+    if (item.subItems) {
+      return item.subItems.some(subItem => isActive(subItem.href));
+    }
+    return isActive(item.href);
+  };
+
+  const toggleSection = (itemName: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(itemName)) {
+      newExpanded.delete(itemName);
+    } else {
+      newExpanded.add(itemName);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  // Ensure navigation is always an array
+  const safeNavigation = Array.isArray(navigation) ? navigation : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,19 +130,55 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(item.href)
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {item.name}
-              </Link>
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+            {safeNavigation.map((item) => (
+              <div key={item.name}>
+                {item.subItems ? (
+                  <div>
+                    <button
+                      onClick={() => toggleSection(item.name)}
+                      className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isSectionActive(item)
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span>{item.name}</span>
+                      <span className={`transform transition-transform ${expandedSections.has(item.name) ? 'rotate-90' : ''}`}>
+                        ▶
+                      </span>
+                    </button>
+                    {expandedSections.has(item.name) && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {item.subItems.map((subItem) => (
+                          <Link
+                            key={subItem.name}
+                            href={subItem.href}
+                            className={`block px-4 py-2 rounded-lg text-sm transition-colors ${
+                              isActive(subItem.href)
+                                ? 'bg-blue-100 text-blue-800 font-medium'
+                                : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            {subItem.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                )}
+              </div>
             ))}
           </nav>
 

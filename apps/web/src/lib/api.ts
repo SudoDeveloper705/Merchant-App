@@ -138,6 +138,17 @@ export const api = {
     create: (data: any) => apiClient.post('/api/transactions', data),
   },
 
+  // Invoices
+  invoices: {
+    list: (params?: any) => apiClient.get('/api/invoices/merchant', { params }),
+    get: (id: string) => apiClient.get(`/api/invoices/${id}`),
+    create: (data: any) => apiClient.post('/api/invoices', data),
+    update: (id: string, data: any) => apiClient.put(`/api/invoices/${id}`, data),
+    send: (id: string) => apiClient.post(`/api/invoices/${id}/send`),
+    markAsPaid: (id: string) => apiClient.post(`/api/invoices/${id}/mark-paid`),
+    downloadPDF: (id: string) => apiClient.get(`/api/invoices/${id}/pdf`, { responseType: 'blob' }),
+  },
+
   // Merchants
   merchants: {
     getMe: () => apiClient.get('/api/merchants/me'),

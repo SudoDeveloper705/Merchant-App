@@ -66,106 +66,175 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Auth check - set loading to true initially
+    // Check for token synchronously first - if no token, resolve immediately
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('accessToken');
+      // Handle empty strings or whitespace-only tokens as "no token"
+      if (token && token.trim()) {
+        token = token.trim();
+      } else {
+        token = null;
+      }
+    } catch (e) {
+      // localStorage might be unavailable (private browsing, etc.)
+      console.warn('localStorage unavailable:', e);
+      token = null;
+    }
+
+    // If no token, we're done immediately - no need for async operations
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    // Add a safety timeout - if auth check takes too long, stop loading anyway
+    const safetyTimeout = setTimeout(() => {
+      console.warn('Auth check timeout - stopping loading state');
+      setLoading(false);
+    }, 3000); // 3 second safety timeout
+
+    // Auth check - we have a token, so process it
     const checkAuth = async () => {
       try {
-        // Double-check we're in browser
-        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-          setLoading(false);
-          return;
-        }
 
-        // If no token, we're done
-        if (!isAuthenticated()) {
-          setLoading(false);
-          return;
-        }
-
-        // Check if this is a dummy token (for testing without backend)
-        const token = localStorage.getItem('accessToken');
-        if (token && token.startsWith('dummy-token-')) {
-          // Extract role from token
-          const role = token.replace('dummy-token-', '') as 'merchant_owner' | 'merchant_manager' | 'merchant_accountant';
-          
-          // Try to get user from localStorage first
-          const storedUser = localStorage.getItem('dummyUser');
-          if (storedUser) {
-            try {
-              const userData = JSON.parse(storedUser) as User;
-              setUser(userData);
-              setLoading(false);
-              return;
-            } catch (e) {
-              // If parsing fails, recreate from role
-            }
-          }
-
-          // Recreate user from role (fallback)
-          const dummyUsers = {
-            merchant_owner: getDummyUserByEmail('owner@merchant.com'),
-            merchant_manager: getDummyUserByEmail('manager@merchant.com'),
-            merchant_accountant: getDummyUserByEmail('accountant@merchant.com'),
-          };
-
-          const dummyUser = dummyUsers[role];
-          if (dummyUser) {
-            const userData: User = {
-              id: `user-${dummyUser.role}`,
-              name: dummyUser.name,
-              email: dummyUser.email,
-              role: dummyUser.role,
-              merchantId: dummyUser.merchantId || '',
-              merchantName: dummyUser.merchantName || '',
-            };
-            // Store in localStorage for next time
-            localStorage.setItem('dummyUser', JSON.stringify(userData));
-            setUser(userData);
+          // Double-check we're in browser (redundant but safe)
+          if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+            clearTimeout(safetyTimeout);
             setLoading(false);
             return;
           }
-        }
 
-        // Try to get user from API (real authentication)
-        try {
-          const response = await getMerchantMe();
-          if (response && response.user && response.merchant) {
-            // Map response to User interface
-            const userData: User = {
-              id: response.user.id,
-              name: response.user.name,
-              email: response.user.email,
-              role: response.user.role,
-              merchantId: response.user.merchantId,
-              merchantName: response.merchant.name,
-            };
-            setUser(userData);
-          }
-        } catch (err) {
-          // Auth failed - clear any invalid tokens (but not dummy tokens)
-          const token = localStorage.getItem('accessToken');
-          if (token && !token.startsWith('dummy-token-')) {
-            console.warn('Auth check failed:', err);
-            if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          // Check if this is a dummy token (for testing without backend)
+          if (token.startsWith('dummy-token-')) {
+            // Extract role from token
+            const role = token.replace('dummy-token-', '') as 'merchant_owner' | 'merchant_manager' | 'merchant_accountant';
+            
+            // Try to get user from localStorage first
+            const storedUser = localStorage.getItem('dummyUser');
+            if (storedUser) {
               try {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                const userData = JSON.parse(storedUser) as User;
+                setUser(userData);
+                clearTimeout(safetyTimeout);
+                setLoading(false);
+                return;
               } catch (e) {
-                // Ignore
+                // If parsing fails, recreate from role
               }
             }
+
+            // Recreate user from role (fallback)
+            const dummyUsers = {
+              merchant_owner: getDummyUserByEmail('owner@merchant.com'),
+              merchant_manager: getDummyUserByEmail('manager@merchant.com'),
+              merchant_accountant: getDummyUserByEmail('accountant@merchant.com'),
+            };
+
+            const dummyUser = dummyUsers[role];
+            if (dummyUser) {
+              const userData: User = {
+                id: `user-${dummyUser.role}`,
+                name: dummyUser.name,
+                email: dummyUser.email,
+                role: dummyUser.role,
+                merchantId: dummyUser.merchantId || '',
+                merchantName: dummyUser.merchantName || '',
+              };
+              // Store in localStorage for next time
+              localStorage.setItem('dummyUser', JSON.stringify(userData));
+              setUser(userData);
+              clearTimeout(safetyTimeout);
+              setLoading(false);
+              return;
+            }
+            
+            // If dummy token role doesn't match, treat as no auth
+            clearTimeout(safetyTimeout);
+            setLoading(false);
+            return;
           }
-        }
+
+          // Check for partner dummy tokens - redirect to partner dashboard
+          if (token.startsWith('dummy-partner-token-')) {
+            // This is a partner token - don't handle here, let PartnerAuthContext handle it
+            // But still set loading to false so the app can render
+            clearTimeout(safetyTimeout);
+            setLoading(false);
+            return;
+          }
+
+          // Try to get user from API (real authentication)
+          // Only call API if we have a real token (not dummy tokens)
+          if (token && !token.startsWith('dummy-token-') && !token.startsWith('dummy-partner-token-')) {
+            // Only make API call if we have a real token
+            // Use Promise.race to enforce a maximum wait time
+            try {
+              const apiPromise = getMerchantMe();
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('API timeout')), 3000)
+              );
+              
+              const response = await Promise.race([apiPromise, timeoutPromise]) as Awaited<ReturnType<typeof getMerchantMe>>;
+              
+              if (response && response.user && response.merchant) {
+                // Map response to User interface
+                const userData: User = {
+                  id: response.user.id,
+                  name: response.user.name,
+                  email: response.user.email,
+                  role: response.user.role,
+                  merchantId: response.user.merchantId,
+                  merchantName: response.merchant.name,
+                };
+                setUser(userData);
+              }
+            } catch (err: any) {
+              // Auth failed or timeout - handle gracefully
+              // Only log if it's not a network/timeout error (which is expected if API is down)
+              const isNetworkError = err?.code === 'ECONNREFUSED' || 
+                                    err?.code === 'ECONNABORTED' ||
+                                    err?.code === 'ETIMEDOUT' ||
+                                    err?.message?.includes('timeout') || 
+                                    err?.message?.includes('Network Error') ||
+                                    err?.message?.includes('Failed to fetch') ||
+                                    err?.message?.includes('ERR_NETWORK') ||
+                                    err?.message === 'API timeout';
+              
+              if (!isNetworkError && err?.response?.status !== 401) {
+                // Real auth error (not network/timeout and not 401) - clear invalid tokens
+                console.warn('Auth check failed:', err);
+                if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+                  try {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                  } catch (e) {
+                    // Ignore
+                  }
+                }
+              }
+              // For network errors, timeouts, or 401s, don't set user but keep token
+              // This allows the app to continue if API is temporarily unavailable
+              // User will be redirected to login by the page component
+            }
+          }
       } catch (error) {
         // Ignore all errors - don't break the app
         console.warn('Auth initialization error:', error);
       } finally {
-        // Always set loading to false when done
+        // Always clear safety timeout and set loading to false when done
+        clearTimeout(safetyTimeout);
         setLoading(false);
       }
     };
 
-    // Run check
+    // Run check immediately
     checkAuth();
+    
+    // Cleanup function - clear timeout if component unmounts
+    return () => {
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   /**
@@ -181,7 +250,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check for dummy credentials first (for testing without backend)
       const dummyUser = validateDummyCredentials(data.email, data.password);
       if (dummyUser) {
-        // Create mock user session
+        // Handle partner users differently
+        if (dummyUser.userType === 'partner') {
+          // Partner users should use PartnerAuthContext, but for now redirect to partner dashboard
+          if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+            const partnerUserData = {
+              id: `partner-user-${dummyUser.role}`,
+              name: dummyUser.name,
+              email: dummyUser.email,
+              role: dummyUser.role,
+              partnerId: dummyUser.partnerId!,
+              partnerName: dummyUser.partnerName!,
+            };
+            localStorage.setItem('accessToken', `dummy-partner-token-${dummyUser.role}`);
+            localStorage.setItem('refreshToken', `dummy-partner-refresh-${dummyUser.role}`);
+            localStorage.setItem('dummyPartnerUser', JSON.stringify(partnerUserData));
+          }
+          setLoading(false);
+          if (typeof window !== 'undefined') {
+            window.location.href = '/partner/dashboard';
+          }
+          return;
+        }
+
+        // Create mock merchant user session
         const userData: User = {
           id: `user-${dummyUser.role}`,
           name: dummyUser.name,
@@ -201,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         setLoading(false);
 
-        // Redirect to dashboard (use window.location to avoid SSR issues)
+        // Redirect to merchant dashboard
         if (typeof window !== 'undefined') {
           window.location.href = '/merchant/dashboard';
         }

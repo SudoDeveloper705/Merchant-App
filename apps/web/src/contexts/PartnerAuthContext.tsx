@@ -82,9 +82,33 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
 
         // Check if this is a dummy token (for testing without backend)
         const token = localStorage.getItem('accessToken');
-        if (token && token.startsWith('dummy-partner-token-')) {
+        if (token && (token.startsWith('dummy-partner-token-') || token.startsWith('dummy-token-'))) {
           // Extract role from token
-          const role = token.replace('dummy-partner-token-', '') as 'partner_owner' | 'partner_staff';
+          let role: 'partner_owner' | 'partner_staff' | null = null;
+          if (token.startsWith('dummy-partner-token-')) {
+            role = token.replace('dummy-partner-token-', '') as 'partner_owner' | 'partner_staff';
+          } else if (token.startsWith('dummy-token-')) {
+            // This might be set by AuthContext, check dummyPartnerUser
+            const storedUser = localStorage.getItem('dummyPartnerUser');
+            if (storedUser) {
+              try {
+                const userData = JSON.parse(storedUser) as PartnerUser;
+                setUser(userData);
+                setLoading(false);
+                return;
+              } catch (e) {
+                // If parsing fails, continue to recreate
+              }
+            }
+            // If no stored user, this is not a partner token
+            setLoading(false);
+            return;
+          }
+          
+          if (!role) {
+            setLoading(false);
+            return;
+          }
           
           // Try to get user from localStorage first
           const storedUser = localStorage.getItem('dummyPartnerUser');
