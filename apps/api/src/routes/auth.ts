@@ -386,12 +386,15 @@ router.post('/refresh', async (req: Request, res: Response) => {
       }
 
       // Generate new access token
+      // SECURITY FIX: Never use fallback values from old token payload
+      // Always use current user record from database to prevent token payload injection
       const newPayload: Omit<JWTPayload, 'iat' | 'exp'> = {
-        userType: payload.userType,
-        userId: payload.userId,
+        userType: payload.userType, // Keep userType from payload (determined by table queried)
+        userId: user.id, // Use from database, not payload
         role: user.role,
-        merchantId: user.merchant_id || payload.merchantId,
-        partnerId: user.partner_id || payload.partnerId,
+        // Only use values from database - never fallback to payload values
+        merchantId: payload.userType === 'merchant' ? user.merchant_id : null,
+        partnerId: payload.userType === 'partner' ? user.partner_id : null,
       };
 
       const accessToken = generateAccessToken(newPayload);

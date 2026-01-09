@@ -85,23 +85,45 @@ export async function processMonthlySettlement(
 
         if (transactionLinksResult.rows.length > 0) {
           // Distribute adjustment proportionally across transactions
+          // FIX: Calculate all adjustments first, then distribute rounding errors to the largest adjustment
           const totalShare = summary.total_partner_share_cents;
+          const adjustments: Array<{ linkId: string; adjustment: number }> = [];
           
+          // Calculate proportional adjustments (with decimals)
           for (const link of transactionLinksResult.rows) {
             if (totalShare > 0) {
               const proportion = link.partner_share_cents / totalShare;
-              const linkAdjustment = Math.round(adjustmentCents * proportion);
-              
-              // Update the link with adjusted amounts
-              await db.query(
-                `UPDATE transaction_agreement_links
-                 SET partner_share_cents = partner_share_cents + $1,
-                     merchant_share_cents = merchant_share_cents - $1,
-                     updated_at = CURRENT_TIMESTAMP
-                 WHERE id = $2`,
-                [linkAdjustment, link.id]
-              );
+              const linkAdjustment = adjustmentCents * proportion;
+              adjustments.push({ linkId: link.id, adjustment: linkAdjustment });
             }
+          }
+          
+          // Round all adjustments and track rounding errors
+          const roundedAdjustments = adjustments.map(adj => ({
+            linkId: adj.linkId,
+            adjustment: Math.round(adj.adjustment),
+          }));
+          
+          // Calculate rounding error (difference between required adjustment and sum of rounded)
+          let roundingError = adjustmentCents - roundedAdjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
+          
+          // Distribute rounding error to the largest adjustment (by absolute value)
+          // This ensures the sum equals the required adjustment amount
+          if (Math.abs(roundingError) > 0) {
+            const sortedByAbsValue = [...roundedAdjustments].sort((a, b) => Math.abs(b.adjustment) - Math.abs(a.adjustment));
+            sortedByAbsValue[0].adjustment += roundingError;
+          }
+          
+          // Apply adjustments
+          for (const roundedAdj of roundedAdjustments) {
+            await db.query(
+              `UPDATE transaction_agreement_links
+               SET partner_share_cents = partner_share_cents + $1,
+                   merchant_share_cents = merchant_share_cents - $1,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = $2`,
+              [roundedAdj.adjustment, roundedAdj.linkId]
+            );
           }
         }
       }

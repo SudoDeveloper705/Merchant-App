@@ -209,6 +209,7 @@ router.post('/',
         clientId,
         externalId,
         transactionType,
+        status,
         subtotalCents,
         salesTaxCents,
         totalCents,
@@ -226,18 +227,29 @@ router.post('/',
         });
       }
 
+      // Validate status if provided
+      const transactionStatus = status || 'PENDING';
+      const validStatuses = ['PENDING', 'COMPLETED', 'FAILED', 'CANCELLED'];
+      if (!validStatuses.includes(transactionStatus)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+
       const result = await db.query(
         `INSERT INTO transactions 
          (merchant_id, client_id, external_id, transaction_type, status,
           subtotal_cents, sales_tax_cents, total_cents, fees_cents, net_cents,
           currency, description, metadata, transaction_date)
-         VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           req.user.merchantId,
           clientId || null,
           externalId || null,
           transactionType || 'PAYMENT',
+          transactionStatus,
           subtotalCents,
           salesTaxCents || 0,
           totalCents,
@@ -253,6 +265,8 @@ router.post('/',
       const transaction = result.rows[0];
 
       // Process revenue split if transaction is COMPLETED
+      // Transactions created as COMPLETED will be processed immediately
+      // Transactions created as PENDING will be processed when status changes to COMPLETED
       if (transaction.status === 'COMPLETED') {
         try {
           await processTransactionRevenueSplit(

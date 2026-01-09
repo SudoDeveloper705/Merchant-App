@@ -76,10 +76,44 @@ export async function requirePartnerAccess(req: Request, res: Response, next: Ne
   }
 
   // Block access to restricted resources
+  // FIX: Use exact path matching or proper route hierarchy validation
+  // Substring matching causes false positives (e.g., '/api/partner/expenses-management' would be blocked)
   const path = req.path.toLowerCase();
-  const restrictedPaths = ['/bank-accounts', '/expenses', '/partners'];
   
-  if (restrictedPaths.some(restricted => path.includes(restricted))) {
+  // Define restricted paths with exact matching
+  // Paths like '/api/partner/expenses-management' should NOT be blocked
+  // Only exact matches or paths starting with restricted prefix + '/' should be blocked
+  const restrictedPathPrefixes = [
+    '/api/partner/bank-accounts',
+    '/api/partner/expenses',
+    '/api/partner/partners'
+  ];
+  
+  // Check if path matches any restricted prefix exactly OR starts with prefix + '/'
+  // This ensures '/api/partner/expenses' and '/api/partner/expenses/123' are blocked
+  // but '/api/partner/expenses-management' is NOT blocked
+  const isRestricted = restrictedPathPrefixes.some(prefix => {
+    // Exact match
+    if (path === prefix) {
+      return true;
+    }
+    // Path starts with prefix + '/' (e.g., '/api/partner/expenses/123')
+    if (path.startsWith(prefix + '/')) {
+      return true;
+    }
+    return false;
+  });
+  
+  // Also check for simple paths without /api/partner prefix (exact matches only)
+  // These should be exact matches, not substring matches
+  const restrictedSimplePaths = ['/bank-accounts', '/expenses', '/partners'];
+  const isRestrictedSimple = restrictedSimplePaths.some(restricted => {
+    // Only match exact path or path ending with '/' + restricted (for nested routes)
+    // This prevents false positives like '/expenses-management' matching '/expenses'
+    return path === restricted || path === restricted + '/' || path.endsWith('/' + restricted) || path.endsWith('/' + restricted + '/');
+  });
+  
+  if (isRestricted || isRestrictedSimple) {
     return res.status(403).json({
       success: false,
       error: 'Access denied: Partner users cannot access this resource',

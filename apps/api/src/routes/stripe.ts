@@ -244,11 +244,15 @@ router.post('/webhook', async (req: Request, res: Response) => {
           apiVersion: '2023-10-16' as any,
         });
 
-        // req.body is a Buffer when using raw body parser
-        const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
+        // SECURITY FIX: Use raw body directly - never reconstruct from parsed JSON
+        // The raw body middleware at app level ensures req.body is a Buffer
+        // Reconstructing from JSON.stringify changes bytes and breaks signature verification
+        if (!Buffer.isBuffer(req.body)) {
+          throw new Error('Raw body is required for webhook signature verification. Ensure raw body middleware is applied.');
+        }
         
         verifiedEvent = stripe.webhooks.constructEvent(
-          body,
+          req.body,
           sig,
           webhookSecret
         ) as Stripe.Event;
