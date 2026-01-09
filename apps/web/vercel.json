@@ -1,7 +1,9 @@
 {
+  "version": 2,
   "buildCommand": "cd ../.. && npm run build:shared && cd apps/web && npm run build",
   "outputDirectory": ".next",
   "installCommand": "cd ../.. && npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "devCommand": "npm run dev"
 }
 
