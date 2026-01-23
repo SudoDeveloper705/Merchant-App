@@ -76,24 +76,16 @@ apiClient.interceptors.response.use(
             return apiClient(originalRequest);
           }
         } catch (refreshError: any) {
-          // Refresh failed - only redirect if it's not a network error
-          const isNetworkError = refreshError?.code === 'ECONNREFUSED' || 
-                                refreshError?.message?.includes('Network Error') || 
-                                refreshError?.message?.includes('Failed to fetch');
+          // Refresh failed - don't clear tokens or redirect here
+          // Let the calling code (export utility) decide what to do
+          // This prevents unwanted redirects during export operations
           
-          if (!isNetworkError) {
-            // Only clear tokens and redirect for actual auth errors, not network errors
-            try {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              if (window.location) {
-                window.location.href = '/login';
-              }
-            } catch (e) {
-              console.warn('Failed to clear localStorage:', e);
-            }
-          }
-          return Promise.reject(refreshError);
+          // Create a more user-friendly error message
+          const errorMessage = refreshError?.response?.data?.error || refreshError?.message || 'Authentication failed';
+          const friendlyError = new Error(errorMessage);
+          (friendlyError as any).isRefreshError = true; // Mark as refresh error, not export error
+          (friendlyError as any).originalError = refreshError;
+          return Promise.reject(friendlyError);
         }
       }
     }

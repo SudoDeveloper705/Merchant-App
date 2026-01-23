@@ -18,7 +18,7 @@ interface NavItem {
 export function MerchantLayout({ children }: MerchantLayoutProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['revenue-splits', 'user-role-management']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['revenue-splits', 'user-role-management', 'settings-legal']));
 
   // Role-based navigation
   const getCurrentRole = (): string => {
@@ -47,6 +47,14 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
       { name: 'Invite User', href: '/merchant/users/invite' },
     ];
 
+    // Settings & Legal submenu
+    const settingsSubmenu: NavItem[] = [
+      { name: 'Application Settings', href: '/merchant/settings/application' },
+      { name: 'Notification Preferences', href: '/merchant/settings/notifications' },
+      { name: 'Legal Terms & Disclaimers', href: '/merchant/settings/legal' },
+      { name: 'Data & Security Settings', href: '/merchant/settings/security' },
+    ];
+
     // Base navigation items available to all roles
     const baseNav: NavItem[] = [
       { name: 'Dashboard', href: '/merchant/dashboard' },
@@ -65,6 +73,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'User & Role Management', href: '/merchant/users', subItems: userManagementSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
+          { name: 'Settings & Legal', href: '/merchant/settings', subItems: settingsSubmenu },
         ];
       case 'merchant_manager':
         // Manager can manage partners and agreements, view reports
@@ -74,6 +83,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Agreements', href: '/merchant/agreements' },
           { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
+          { name: 'Settings & Legal', href: '/merchant/settings', subItems: settingsSubmenu },
         ];
       case 'merchant_accountant':
         // Accountant focuses on financials: transactions, payouts, reports
@@ -82,6 +92,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Payouts', href: '/merchant/payouts' },
           { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
+          { name: 'Settings & Legal', href: '/merchant/settings', subItems: settingsSubmenu },
         ];
       default:
         // Default to owner navigation
@@ -93,6 +104,7 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
           { name: 'Revenue Splits', href: '/merchant/payouts/split-configuration', subItems: revenueSplitsSubmenu },
           { name: 'User & Role Management', href: '/merchant/users', subItems: userManagementSubmenu },
           { name: 'Reports', href: '/merchant/reports' },
+          { name: 'Settings & Legal', href: '/merchant/settings', subItems: settingsSubmenu },
         ];
     }
   };
@@ -120,13 +132,15 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
   const safeNavigation = Array.isArray(navigation) ? navigation : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f172a] transition-all duration-300">
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+      <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-[#1e293b] shadow-lg dark:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border-r border-gray-200 dark:border-slate-700/50 backdrop-blur-sm">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Merchant App</h1>
+          <div className="flex items-center justify-center h-16 border-b border-gray-200 dark:border-slate-700/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800/50 dark:to-slate-900/50">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+              Merchant App
+            </h1>
           </div>
 
           {/* Navigation */}
@@ -137,10 +151,10 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
                   <div>
                     <button
                       onClick={() => toggleSection(item.name)}
-                      className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isSectionActive(item)
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/20 dark:to-indigo-500/20 text-blue-700 dark:text-blue-300 shadow-sm dark:shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-200/50 dark:border-blue-500/30'
+                          : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:shadow-sm dark:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)]'
                       }`}
                     >
                       <span>{item.name}</span>
@@ -154,10 +168,10 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
                           <Link
                             key={subItem.name}
                             href={subItem.href}
-                            className={`block px-4 py-2 rounded-lg text-sm transition-colors ${
+                            className={`block px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
                               isActive(subItem.href)
-                                ? 'bg-blue-100 text-blue-800 font-medium'
-                                : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-500/30 dark:to-indigo-500/30 text-blue-800 dark:text-blue-200 font-medium shadow-sm dark:shadow-[0_0_20px_rgba(59,130,246,0.3)] border-l-2 border-blue-500 dark:border-blue-400'
+                                : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:translate-x-1'
                             }`}
                           >
                             {subItem.name}
@@ -169,10 +183,10 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
                 ) : (
                   <Link
                     href={item.href}
-                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive(item.href)
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-500/20 dark:to-indigo-500/20 text-blue-700 dark:text-blue-300 shadow-sm dark:shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-200/50 dark:border-blue-500/30'
+                        : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:shadow-sm dark:hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)]'
                     }`}
                   >
                     {item.name}
@@ -182,39 +196,50 @@ export function MerchantLayout({ children }: MerchantLayoutProps) {
             ))}
           </nav>
 
-          {/* User info and logout */}
-          <div className="p-4 border-t border-gray-200">
-            {user ? (
-              <>
-                <div className="mb-2">
-                  <p className="text-sm font-medium text-gray-900">{user.email}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role?.replace('_', ' ')}</p>
-                </div>
-                <button
-                  onClick={logout}
-                  className="w-full px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <div className="mb-2">
-                <p className="text-sm font-medium text-gray-500">Not logged in</p>
-                <Link
-                  href="/login"
-                  className="mt-2 block w-full text-center px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  Login
-                </Link>
-              </div>
-            )}
+          {/* Support button */}
+          <div className="p-4 border-t border-gray-200 dark:border-slate-700/50 bg-gradient-to-t from-gray-50 to-transparent dark:from-slate-800/50 dark:to-transparent">
+            <a
+              href="mailto:support@merchantapp.com"
+              className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-all duration-200 border border-blue-200 dark:border-blue-500/30 hover:border-blue-300 dark:hover:border-blue-400/50 hover:shadow-sm dark:hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Support
+            </a>
           </div>
         </div>
       </div>
 
       {/* Main content */}
       <div className="pl-64">
-        <main className="p-8">{children}</main>
+        {/* Header with user info and logout */}
+        <header className="fixed top-0 right-0 left-64 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-700/50 z-10 shadow-sm dark:shadow-dark">
+          <div className="flex items-center justify-end px-6 h-16">
+            {user ? (
+              <div className="flex items-center space-x-4">
+                <div className="text-right px-4 py-2 rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600/50">
+                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{user.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 capitalize">{user.role?.replace('_', ' ')}</p>
+                </div>
+                <button
+                  onClick={logout}
+                  className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-all duration-200 border border-red-200 dark:border-red-500/30 hover:border-red-300 dark:hover:border-red-400/50 hover:shadow-sm dark:hover:shadow-glow"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-all duration-200 border border-blue-200 dark:border-blue-500/30 hover:border-blue-300 dark:hover:border-blue-400/50 hover:shadow-sm dark:hover:shadow-glow"
+              >
+                Login
+              </Link>
+            )}
+          </div>
+        </header>
+        <main className="pt-[100px] p-8 dark:text-slate-100">{children}</main>
       </div>
     </div>
   );

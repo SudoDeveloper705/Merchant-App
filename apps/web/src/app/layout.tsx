@@ -1,6 +1,7 @@
 import React from 'react'
 import './globals.css'
 import { ClientAuthProvider } from '@/components/ClientAuthProvider'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 export const metadata = {
   title: 'Merchant App',
@@ -13,9 +14,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <ClientAuthProvider>{children}</ClientAuthProvider>
+        <ThemeProvider>
+          <ClientAuthProvider>{children}</ClientAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

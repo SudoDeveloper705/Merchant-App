@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { StatCard } from './StatCard';
+import { Button } from '@/components/ui';
+import { exportTransactions, exportPayouts } from '@/utils/export';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OwnerDashboardProps {
   user: {
@@ -13,7 +16,9 @@ interface OwnerDashboardProps {
 }
 
 export function OwnerDashboard({ user }: OwnerDashboardProps) {
+  const { user: authUser } = useAuth();
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [exporting, setExporting] = useState<'transactions' | 'payouts' | null>(null);
 
   // Mock data for owner dashboard - full access to all metrics
   const metrics = {
@@ -33,10 +38,60 @@ export function OwnerDashboard({ user }: OwnerDashboardProps) {
     return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const handleExportTransactions = async () => {
+    try {
+      setExporting('transactions');
+      await exportTransactions(period, authUser?.merchantId);
+    } catch (error: any) {
+      // Check if it's a redirect error (session expired from export endpoint)
+      const isRedirectError = error.message?.includes('session has expired') || 
+                             error.message?.includes('log in again');
+      
+      // Only show alert if it's not a redirect error (redirect will happen automatically)
+      if (!isRedirectError) {
+        // Check if it's a refresh token error - show helpful message
+        if (error.message?.includes('Invalid refresh token') || 
+            error.message?.includes('Token refresh failed') ||
+            error.message?.includes('Authentication failed')) {
+          alert('Your session has expired. Please refresh the page and log in again.');
+        } else {
+          alert(error.message || 'Failed to export transactions');
+        }
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPayouts = async () => {
+    try {
+      setExporting('payouts');
+      await exportPayouts(period, authUser?.merchantId);
+    } catch (error: any) {
+      // Check if it's a redirect error (session expired from export endpoint)
+      const isRedirectError = error.message?.includes('session has expired') || 
+                             error.message?.includes('log in again');
+      
+      // Only show alert if it's not a redirect error (redirect will happen automatically)
+      if (!isRedirectError) {
+        // Check if it's a refresh token error - show helpful message
+        if (error.message?.includes('Invalid refresh token') || 
+            error.message?.includes('Token refresh failed') ||
+            error.message?.includes('Authentication failed')) {
+          alert('Your session has expired. Please refresh the page and log in again.');
+        } else {
+          alert(error.message || 'Failed to export payouts');
+        }
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-12">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -53,6 +108,28 @@ export function OwnerDashboard({ user }: OwnerDashboardProps) {
             <option value="month">This Month</option>
             <option value="year">This Year</option>
           </select>
+          <Button
+            variant="outline"
+            onClick={handleExportTransactions}
+            disabled={exporting !== null}
+            isLoading={exporting === 'transactions'}
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Transactions
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportPayouts}
+            disabled={exporting !== null}
+            isLoading={exporting === 'payouts'}
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Payouts
+          </Button>
         </div>
       </div>
 

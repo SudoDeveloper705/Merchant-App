@@ -23,6 +23,14 @@
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark theme enhancements */
+  .dark body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }
 
@@ -33,6 +41,31 @@
     margin-right: auto;
     padding-left: 2rem;
     padding-right: 2rem;
+  }
+
+  /* Stylish dark mode card */
+  .dark-card {
+    @apply bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-dark-lg;
+    transition: all 0.3s ease;
+  }
+
+  .dark-card:hover {
+    @apply border-slate-600/50 shadow-dark-xl;
+    transform: translateY(-2px);
+  }
+
+  /* Glassmorphism effect */
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .dark .glass {
+    @apply bg-slate-800/30 backdrop-blur-md border-slate-700/50;
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 

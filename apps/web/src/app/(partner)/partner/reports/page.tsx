@@ -5,11 +5,12 @@ import { PartnerLayout } from '@/components/layouts/PartnerLayout';
 import { usePartnerAuth } from '@/contexts/PartnerAuthContext';
 import { isPartnerOwner, isReadOnly } from '@/utils/partnerRoles';
 import { getSelectedMerchantId } from '@/lib/partnerApi';
-import { api } from '@/lib/api';
+import { exportTransactions, exportPayouts } from '@/utils/export';
 
 export default function PartnerReportsPage() {
   const { user, loading } = usePartnerAuth();
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'transactions' | 'payouts' | null>(null);
+  const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
   const merchantId = getSelectedMerchantId();
 
   // Show loading state while auth is being checked
@@ -39,42 +40,15 @@ export default function PartnerReportsPage() {
     if (!merchantId) return;
     
     try {
-      setExporting(true);
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 1);
-      const endDate = new Date();
-
-      const response = await api.reports.exportTransactions({
-        merchantId,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        format: 'csv',
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `transactions-${startDate.toISOString().split('T')[0]}-${endDate.toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      setExporting('transactions');
+      await exportTransactions(period, merchantId);
     } catch (error: any) {
-      console.error('Export failed:', error);
-      
-      // Check if it's a network error
-      const isNetworkError = error.code === 'ECONNREFUSED' || 
-                            error.message?.includes('Network Error') || 
-                            error.message?.includes('Failed to fetch');
-      
-      if (isNetworkError) {
-        alert('Cannot export: Backend server is not running. This feature requires the API server.');
-      } else {
-        alert('Failed to export transactions');
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export transactions');
       }
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -82,42 +56,15 @@ export default function PartnerReportsPage() {
     if (!merchantId) return;
     
     try {
-      setExporting(true);
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 1);
-      const endDate = new Date();
-
-      const response = await api.reports.exportPayouts({
-        merchantId,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        format: 'csv',
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `payouts-${startDate.toISOString().split('T')[0]}-${endDate.toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      setExporting('payouts');
+      await exportPayouts(period, merchantId);
     } catch (error: any) {
-      console.error('Export failed:', error);
-      
-      // Check if it's a network error
-      const isNetworkError = error.code === 'ECONNREFUSED' || 
-                            error.message?.includes('Network Error') || 
-                            error.message?.includes('Failed to fetch');
-      
-      if (isNetworkError) {
-        alert('Cannot export: Backend server is not running. This feature requires the API server.');
-      } else {
-        alert('Failed to export payouts');
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export payouts');
       }
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -146,36 +93,51 @@ export default function PartnerReportsPage() {
         )}
 
         {merchantId && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Export Transactions - Hidden for partner_staff */}
+          <div className="space-y-6">
             {isOwner && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Transactions</h3>
-                <p className="text-sm text-gray-600 mb-4">Download transaction data as CSV</p>
-                <button
-                  onClick={handleExportTransactions}
-                  disabled={exporting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              <div className="flex items-center space-x-2">
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value as 'week' | 'month' | 'year')}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
-                  {exporting ? 'Exporting...' : 'Export Transactions'}
-                </button>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="year">This Year</option>
+                </select>
               </div>
             )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Export Transactions - Hidden for partner_staff */}
+              {isOwner && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Transactions</h3>
+                  <p className="text-sm text-gray-600 mb-4">Download transaction data as CSV</p>
+                  <button
+                    onClick={handleExportTransactions}
+                    disabled={exporting !== null}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  >
+                    {exporting === 'transactions' ? 'Exporting...' : 'Export Transactions'}
+                  </button>
+                </div>
+              )}
 
-            {/* Export Payouts - Hidden for partner_staff */}
-            {isOwner && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Payouts</h3>
-                <p className="text-sm text-gray-600 mb-4">Download payout data as CSV</p>
-                <button
-                  onClick={handleExportPayouts}
-                  disabled={exporting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  {exporting ? 'Exporting...' : 'Export Payouts'}
-                </button>
-              </div>
-            )}
+              {/* Export Payouts - Hidden for partner_staff */}
+              {isOwner && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Export Payouts</h3>
+                  <p className="text-sm text-gray-600 mb-4">Download payout data as CSV</p>
+                  <button
+                    onClick={handleExportPayouts}
+                    disabled={exporting !== null}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  >
+                    {exporting === 'payouts' ? 'Exporting...' : 'Export Payouts'}
+                  </button>
+                </div>
+              )}
 
             {/* Read-only message for staff */}
             {readOnly && (

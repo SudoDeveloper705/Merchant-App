@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { StatCard } from './StatCard';
+import { Button } from '@/components/ui';
+import { exportTransactions } from '@/utils/export';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ManagerDashboardProps {
   user: {
@@ -13,7 +16,9 @@ interface ManagerDashboardProps {
 }
 
 export function ManagerDashboard({ user }: ManagerDashboardProps) {
+  const { user: authUser } = useAuth();
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [exporting, setExporting] = useState(false);
 
   // Mock data for manager dashboard - operational metrics
   const metrics = {
@@ -28,6 +33,31 @@ export function ManagerDashboard({ user }: ManagerDashboardProps) {
 
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const handleExportTransactions = async () => {
+    try {
+      setExporting(true);
+      await exportTransactions(period, authUser?.merchantId);
+    } catch (error: any) {
+      // Check if it's a redirect error (session expired from export endpoint)
+      const isRedirectError = error.message?.includes('session has expired') || 
+                             error.message?.includes('log in again');
+      
+      // Only show alert if it's not a redirect error (redirect will happen automatically)
+      if (!isRedirectError) {
+        // Check if it's a refresh token error - show helpful message
+        if (error.message?.includes('Invalid refresh token') || 
+            error.message?.includes('Token refresh failed') ||
+            error.message?.includes('Authentication failed')) {
+          alert('Your session has expired. Please refresh the page and log in again.');
+        } else {
+          alert(error.message || 'Failed to export transactions');
+        }
+      }
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -50,6 +80,17 @@ export function ManagerDashboard({ user }: ManagerDashboardProps) {
             <option value="month">This Month</option>
             <option value="year">This Year</option>
           </select>
+          <Button
+            variant="outline"
+            onClick={handleExportTransactions}
+            disabled={exporting}
+            isLoading={exporting}
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Transactions
+          </Button>
         </div>
       </div>
 

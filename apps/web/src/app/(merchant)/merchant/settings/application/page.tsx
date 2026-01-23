@@ -7,8 +7,10 @@ import { FormSection } from '@/components/company';
 import { Card, CardHeader, CardContent } from '@/components/ui';
 import { Select, Input } from '@/components/ui';
 import { mockSettingsService, ApplicationSettings } from '@/services/mockSettings';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ApplicationSettingsPage() {
+  const { theme, setTheme: setThemeContext } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<ApplicationSettings | null>(null);
@@ -17,10 +19,33 @@ export default function ApplicationSettingsPage() {
     loadSettings();
   }, []);
 
+  // Sync theme from localStorage to settings when settings are loaded
+  useEffect(() => {
+    if (settings) {
+      const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null;
+      if (storedTheme && settings.theme !== storedTheme) {
+        setSettings({ ...settings, theme: storedTheme });
+        setThemeContext(storedTheme);
+      } else if (!storedTheme && settings.theme !== theme) {
+        // If no stored theme, sync from context
+        setSettings({ ...settings, theme });
+      }
+    }
+  }, [settings, theme, setThemeContext]);
+
   const loadSettings = async () => {
     setLoading(true);
     try {
       const data = await mockSettingsService.getApplicationSettings();
+      // Sync with theme context
+      const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null;
+      if (storedTheme) {
+        data.theme = storedTheme;
+        setThemeContext(storedTheme);
+      } else {
+        // If no stored theme, use the theme from context
+        data.theme = theme;
+      }
       setSettings(data);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -48,6 +73,11 @@ export default function ApplicationSettingsPage() {
     
     setSaving(true);
     try {
+      // If changing theme, update the theme context immediately
+      if (key === 'theme') {
+        setThemeContext(value as 'light' | 'dark' | 'auto');
+      }
+      
       const updated = await mockSettingsService.updateApplicationSettings({ [key]: value });
       setSettings(updated);
     } catch (error) {
@@ -74,9 +104,11 @@ export default function ApplicationSettingsPage() {
     <MerchantLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Application Settings</h1>
-          <p className="mt-1 text-sm text-gray-500">Configure application preferences and behavior</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
+            Application Settings
+          </h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">Configure application preferences and behavior</p>
         </div>
 
         {/* Appearance */}

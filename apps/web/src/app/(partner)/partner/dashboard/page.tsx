@@ -7,7 +7,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { TrendChart } from '@/components/partner/TrendChart';
 import { InvoicesTable } from '@/components/partner/InvoicesTable';
 import { PayoutsTable } from '@/components/partner/PayoutsTable';
-import { isReadOnly } from '@/utils/partnerRoles';
+import { isReadOnly, isPartnerOwner } from '@/utils/partnerRoles';
 import {
   getSelectedMerchantId,
   setSelectedMerchantId,
@@ -22,6 +22,8 @@ import {
   type Invoice,
   type Payout,
 } from '@/lib/partnerApi';
+import { Button } from '@/components/ui';
+import { exportTransactions, exportPayouts } from '@/utils/export';
 
 export default function PartnerDashboardPage() {
   const { user, loading: authLoading } = usePartnerAuth();
@@ -33,6 +35,8 @@ export default function PartnerDashboardPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<'transactions' | 'payouts' | null>(null);
+  const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     const initializeMerchant = async () => {
@@ -146,6 +150,36 @@ export default function PartnerDashboardPage() {
     return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const handleExportTransactions = async () => {
+    if (!merchantId) return;
+    try {
+      setExporting('transactions');
+      await exportTransactions(period, merchantId);
+    } catch (error: any) {
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export transactions');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPayouts = async () => {
+    if (!merchantId) return;
+    try {
+      setExporting('payouts');
+      await exportPayouts(period, merchantId);
+    } catch (error: any) {
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export payouts');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
   // Show loading state while auth is being checked
   if (authLoading) {
     return (
@@ -215,11 +249,48 @@ export default function PartnerDashboardPage() {
               Welcome back, {user.name || user.email}
             </p>
           </div>
-          {isReadOnly(user.role) && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-              <p className="text-sm text-blue-800 font-medium">Read-only mode</p>
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            {isPartnerOwner(user.role) && merchantId && (
+              <>
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value as 'week' | 'month' | 'year')}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="year">This Year</option>
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={handleExportTransactions}
+                  disabled={exporting !== null}
+                  isLoading={exporting === 'transactions'}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export Transactions
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleExportPayouts}
+                  disabled={exporting !== null}
+                  isLoading={exporting === 'payouts'}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export Payouts
+                </Button>
+              </>
+            )}
+            {isReadOnly(user.role) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                <p className="text-sm text-blue-800 font-medium">Read-only mode</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Top Cards */}
