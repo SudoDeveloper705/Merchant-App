@@ -49,10 +49,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Load theme from localStorage on mount
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = stored || 'light';
-    setThemeState(initialTheme);
-    applyTheme(initialTheme);
+    try {
+      const stored = localStorage.getItem('theme') as Theme | null;
+      const initialTheme = stored || 'light';
+      setThemeState(initialTheme);
+      applyTheme(initialTheme);
+    } catch (e) {
+      // localStorage might be unavailable
+      console.warn('localStorage unavailable for theme:', e);
+      setThemeState('light');
+      applyTheme('light');
+    }
   }, []);
 
   // Listen for system theme changes when in auto mode
@@ -70,7 +77,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
+    try {
+      localStorage.setItem('theme', newTheme);
+    } catch (e) {
+      console.warn('Failed to save theme to localStorage:', e);
+    }
     applyTheme(newTheme);
   };
 

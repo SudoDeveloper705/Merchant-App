@@ -66,6 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Immediate fallback - ensure loading resolves within 3 seconds no matter what
+    const absoluteTimeout = setTimeout(() => {
+      console.warn('Absolute timeout - forcing loading to false');
+      setLoading(false);
+    }, 3000);
+
     // Check for token synchronously first - if no token, resolve immediately
     let token: string | null = null;
     try {
@@ -84,23 +90,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // If no token, we're done immediately - no need for async operations
     if (!token) {
+      clearTimeout(absoluteTimeout);
       setLoading(false);
       return;
     }
 
     // Add a safety timeout - if auth check takes too long, stop loading anyway
-    const safetyTimeout = setTimeout(() => {
+    let safetyTimeout: NodeJS.Timeout | null = setTimeout(() => {
       console.warn('Auth check timeout - stopping loading state');
       setLoading(false);
-    }, 3000); // 3 second safety timeout
+      safetyTimeout = null;
+    }, 2000); // 2 second safety timeout (reduced for faster loading)
 
     // Auth check - we have a token, so process it
     const checkAuth = async () => {
-      try {
+      let timeoutCleared = false;
+      const clearSafetyTimeout = () => {
+        if (!timeoutCleared && safetyTimeout) {
+          clearTimeout(safetyTimeout);
+          safetyTimeout = null;
+          timeoutCleared = true;
+        }
+      };
 
+      try {
           // Double-check we're in browser (redundant but safe)
           if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-            clearTimeout(safetyTimeout);
+            clearSafetyTimeout();
             setLoading(false);
             return;
           }
@@ -116,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               try {
                 const userData = JSON.parse(storedUser) as User;
                 setUser(userData);
-                clearTimeout(safetyTimeout);
+                clearSafetyTimeout();
                 setLoading(false);
                 return;
               } catch (e) {
@@ -144,13 +160,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Store in localStorage for next time
               localStorage.setItem('dummyUser', JSON.stringify(userData));
               setUser(userData);
-              clearTimeout(safetyTimeout);
+              clearSafetyTimeout();
               setLoading(false);
               return;
             }
             
             // If dummy token role doesn't match, treat as no auth
-            clearTimeout(safetyTimeout);
+            clearSafetyTimeout();
             setLoading(false);
             return;
           }
@@ -159,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (token.startsWith('dummy-partner-token-')) {
             // This is a partner token - don't handle here, let PartnerAuthContext handle it
             // But still set loading to false so the app can render
-            clearTimeout(safetyTimeout);
+            clearSafetyTimeout();
             setLoading(false);
             return;
           }
@@ -172,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const apiPromise = getMerchantMe();
               const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('API timeout')), 3000)
+                setTimeout(() => reject(new Error('API timeout')), 2000)
               );
               
               const response = await Promise.race([apiPromise, timeoutPromise]) as Awaited<ReturnType<typeof getMerchantMe>>;
@@ -223,7 +239,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('Auth initialization error:', error);
       } finally {
         // Always clear safety timeout and set loading to false when done
-        clearTimeout(safetyTimeout);
+        if (safetyTimeout) {
+          clearTimeout(safetyTimeout);
+          safetyTimeout = null;
+        }
+        clearTimeout(absoluteTimeout);
         setLoading(false);
       }
     };
@@ -233,7 +253,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Cleanup function - clear timeout if component unmounts
     return () => {
-      clearTimeout(safetyTimeout);
+      if (safetyTimeout) {
+        clearTimeout(safetyTimeout);
+      }
+      clearTimeout(absoluteTimeout);
     };
   }, []);
 
