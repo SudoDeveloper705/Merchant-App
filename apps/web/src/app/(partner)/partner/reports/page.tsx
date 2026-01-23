@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { PartnerLayout } from '@/components/layouts/PartnerLayout';
 import { usePartnerAuth } from '@/contexts/PartnerAuthContext';
 import { isPartnerOwner, isReadOnly } from '@/utils/partnerRoles';
@@ -12,6 +12,41 @@ export default function PartnerReportsPage() {
   const [exporting, setExporting] = useState<'transactions' | 'payouts' | null>(null);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
   const merchantId = getSelectedMerchantId();
+
+  const handleExportTransactions = async () => {
+    if (!merchantId || !user?.partnerId) return;
+    
+    try {
+      setExporting('transactions');
+      await exportTransactions(period, merchantId, user.partnerId);
+    } catch (error: any) {
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export transactions');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPayouts = async () => {
+    if (!merchantId || !user?.partnerId) return;
+    
+    try {
+      setExporting('payouts');
+      await exportPayouts(period, merchantId, user.partnerId);
+    } catch (error: any) {
+      // Don't show alert if it's an auth error (redirect will happen)
+      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
+        alert(error.message || 'Failed to export payouts');
+      }
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const isOwner = isPartnerOwner(user?.role);
+  const readOnly = isReadOnly(user?.role);
 
   // Show loading state while auth is being checked
   if (loading) {
@@ -35,41 +70,6 @@ export default function PartnerReportsPage() {
       </PartnerLayout>
     );
   }
-
-  const handleExportTransactions = async () => {
-    if (!merchantId) return;
-    
-    try {
-      setExporting('transactions');
-      await exportTransactions(period, merchantId);
-    } catch (error: any) {
-      // Don't show alert if it's an auth error (redirect will happen)
-      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
-        alert(error.message || 'Failed to export transactions');
-      }
-    } finally {
-      setExporting(null);
-    }
-  };
-
-  const handleExportPayouts = async () => {
-    if (!merchantId) return;
-    
-    try {
-      setExporting('payouts');
-      await exportPayouts(period, merchantId);
-    } catch (error: any) {
-      // Don't show alert if it's an auth error (redirect will happen)
-      if (!error.message?.includes('session has expired') && !error.message?.includes('log in again')) {
-        alert(error.message || 'Failed to export payouts');
-      }
-    } finally {
-      setExporting(null);
-    }
-  };
-
-  const isOwner = isPartnerOwner(user?.role);
-  const readOnly = isReadOnly(user?.role);
 
   return (
     <PartnerLayout>
@@ -138,6 +138,7 @@ export default function PartnerReportsPage() {
                   </button>
                 </div>
               )}
+            </div>
 
             {/* Read-only message for staff */}
             {readOnly && (
@@ -159,4 +160,3 @@ export default function PartnerReportsPage() {
     </PartnerLayout>
   );
 }
-
